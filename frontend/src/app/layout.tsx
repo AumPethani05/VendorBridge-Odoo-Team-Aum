@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AppShell } from "@/components/layout/AppShell";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -14,8 +15,6 @@ export const metadata: Metadata = {
   authors: [{ name: "VendorBridge Team" }],
 };
 
-import { Sidebar } from "@/components/layout/Sidebar";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -24,10 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="font-sans antialiased h-full bg-slate-50 text-slate-900">
-        <Sidebar />
-        <main className="pl-64 min-h-screen">
-          {children}
-        </main>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

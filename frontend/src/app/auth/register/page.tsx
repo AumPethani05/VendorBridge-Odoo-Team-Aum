@@ -5,7 +5,7 @@ import RegisterForm from "@/components/auth/RegisterForm";
 
 export default function RegisterPage() {
   return (
-    <AuthLayout title="Registration Screen (Screen 2)">
+    <AuthLayout>
       <AuthCard maxWidth="register">
         <RegisterForm />
       </AuthCard>

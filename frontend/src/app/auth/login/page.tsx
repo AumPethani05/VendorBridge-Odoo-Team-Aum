@@ -5,7 +5,7 @@ import LoginForm from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
   return (
-    <AuthLayout title="Login Screen (Screen 1)">
+    <AuthLayout>
       <AuthCard maxWidth="login">
         <LoginForm />
       </AuthCard>

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 import Textarea from "../ui/Textarea";
@@ -24,6 +25,7 @@ const COUNTRY_OPTIONS = [
 ];
 
 export const RegisterForm: React.FC = () => {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -108,6 +110,7 @@ export const RegisterForm: React.FC = () => {
 
       if (response.success) {
         setSuccessMessage(response.message || "Registration successful!");
+        window.localStorage.setItem("vendorbridge-authenticated", "true");
         // Clear form on success
         setFormData({
           firstName: "",
@@ -120,6 +123,7 @@ export const RegisterForm: React.FC = () => {
           confirmPassword: "",
           additionalInfo: "",
         });
+        router.replace("/dashboard");
       } else {
         setGeneralError(response.message || "Registration failed. Please try again.");
       }
