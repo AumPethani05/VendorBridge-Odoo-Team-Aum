@@ -110,7 +110,6 @@ export const RegisterForm: React.FC = () => {
 
       if (response.success) {
         setSuccessMessage(response.message || "Registration successful!");
-        window.localStorage.setItem("vendorbridge-authenticated", "true");
         // Clear form on success
         setFormData({
           firstName: "",
@@ -123,7 +122,7 @@ export const RegisterForm: React.FC = () => {
           confirmPassword: "",
           additionalInfo: "",
         });
-        router.replace("/dashboard");
+        router.replace("/auth/login");
       } else {
         setGeneralError(response.message || "Registration failed. Please try again.");
       }

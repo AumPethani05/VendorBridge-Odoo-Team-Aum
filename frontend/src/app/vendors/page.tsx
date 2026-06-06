@@ -2,14 +2,49 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Search, Plus, ListFilter, Eye, MoreVertical } from "lucide-react";
+import { Search, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+type Vendor = {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  category?: string | null;
+  gst_no?: string | null;
+  status: string;
+  address?: string | null;
+};
+
+type VendorFormData = {
+  name: string;
+  email: string;
+  phone: string;
+  category: string;
+  gst_no: string;
+  status: string;
+  address: string;
+};
+
+const initialVendorForm: VendorFormData = {
+  name: "",
+  email: "",
+  phone: "",
+  category: "",
+  gst_no: "",
+  status: "active",
+  address: "",
+};
+
 export default function VendorsPage() {
-  const [vendors, setVendors] = useState<any>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formData, setFormData] = useState<VendorFormData>(initialVendorForm);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchVendors = async () => {
@@ -28,15 +63,50 @@ export default function VendorsPage() {
     fetchVendors();
   }, [search, activeFilter]);
 
-  // Robustly handle cases where vendors might not be an array
   const safeVendors = Array.isArray(vendors) ? vendors : [];
 
   const filters = [
     { label: "All", count: safeVendors.length, id: "all" },
-    { label: "Active", count: safeVendors.filter(v => (v as any).status === 'active').length, id: "active" },
-    { label: "Pending", count: safeVendors.filter(v => (v as any).status === 'pending').length, id: "pending" },
-    { label: "Blocked", count: safeVendors.filter(v => (v as any).status === 'blocked').length, id: "blocked" },
+    { label: "Active", count: safeVendors.filter(v => v.status === 'active').length, id: "active" },
+    { label: "Pending", count: safeVendors.filter(v => v.status === 'pending').length, id: "pending" },
+    { label: "Blocked", count: safeVendors.filter(v => v.status === 'blocked').length, id: "blocked" },
   ];
+
+  const handleFormChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+    if (formError) setFormError(null);
+  };
+
+  const handleCreateVendor = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError(null);
+
+    if (!formData.name.trim() || !formData.email.trim()) {
+      setFormError("Vendor name and email are required.");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const response = await axios.post<Vendor>("http://localhost:3001/api/procurement/vendors", formData);
+      setVendors((current) => [response.data, ...current]);
+      setFormData(initialVendorForm);
+      setIsFormOpen(false);
+      setActiveFilter("all");
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        setFormError(error.response?.data?.error || "Failed to create vendor.");
+      } else {
+        setFormError("Failed to create vendor.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="p-8 space-y-6">
@@ -45,10 +115,113 @@ export default function VendorsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Vendors</h1>
           <p className="text-slate-500 mt-1 text-sm font-medium">Manage supplier profiles and registrations</p>
         </div>
-        <button className="flex items-center gap-2 px-5 py-2.5 bg-[#0e3a6e] text-white rounded-xl text-sm font-bold hover:bg-[#0b2d55] transition-colors shadow-lg shadow-blue-900/10">
-          <Plus className="w-4 h-4" /> Add Vendor
+        <button
+          type="button"
+          onClick={() => setIsFormOpen((current) => !current)}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#0e3a6e] text-white rounded-xl text-sm font-bold hover:bg-[#0b2d55] transition-colors shadow-lg shadow-blue-900/10"
+        >
+          {isFormOpen ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          {isFormOpen ? "Close" : "Add Vendor"}
         </button>
       </div>
+
+      {isFormOpen && (
+        <form
+          onSubmit={handleCreateVendor}
+          className="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 space-y-5"
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">New Vendor</h2>
+              <p className="text-sm font-medium text-slate-500 mt-1">Add supplier details to the vendor list</p>
+            </div>
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleFormChange}
+              className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            >
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="blocked">Blocked</option>
+            </select>
+          </div>
+
+          {formError && (
+            <div className="px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm font-bold text-red-600">
+              {formError}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              name="name"
+              value={formData.name}
+              onChange={handleFormChange}
+              placeholder="Vendor name"
+              className="h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              required
+            />
+            <input
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleFormChange}
+              placeholder="Email address"
+              className="h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              required
+            />
+            <input
+              name="phone"
+              value={formData.phone}
+              onChange={handleFormChange}
+              placeholder="Contact number"
+              className="h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
+            <input
+              name="category"
+              value={formData.category}
+              onChange={handleFormChange}
+              placeholder="Category"
+              className="h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
+            <input
+              name="gst_no"
+              value={formData.gst_no}
+              onChange={handleFormChange}
+              placeholder="GST number"
+              className="h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
+            <textarea
+              name="address"
+              value={formData.address}
+              onChange={handleFormChange}
+              placeholder="Address"
+              className="min-h-11 px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-y md:col-span-2"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsFormOpen(false);
+                setFormError(null);
+              }}
+              className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="px-5 py-2.5 bg-[#0e3a6e] text-white rounded-xl text-sm font-bold hover:bg-[#0b2d55] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSaving ? "Saving..." : "Save Vendor"}
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="relative group">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />

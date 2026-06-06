@@ -1,11 +1,13 @@
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 const API_BASE_URL = `${BACKEND_URL}/api/auth`;
+const DEMO_USERS_KEY = "vendorbridge-demo-users";
 
 export interface AuthResponse {
   success: boolean;
   message: string;
   user?: {
     id: number;
+    username?: string;
     email: string;
   };
 }
@@ -36,7 +38,11 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        username: payload.email,
+        email: payload.email,
+        password: payload.password,
+      }),
     });
 
     const data = await res.json();
@@ -75,7 +81,14 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        username: payload.email,
+        first_name: payload.firstName,
+        last_name: payload.lastName,
         email: payload.email,
+        phone_number: payload.phoneNumber,
+        role: payload.role,
+        country: payload.country,
+        additional_information: payload.additionalInfo,
         password: payload.password,
       }),
     });
@@ -112,16 +125,28 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
 function mockLogin(payload: LoginPayload): Promise<AuthResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
-      if (payload.email === "admin@example.com" && payload.password === "password123") {
+      const email = payload.email.trim().toLowerCase();
+      const demoUsers = getDemoUsers();
+      const registeredUser = demoUsers.find(
+        (user) => user.email === email && user.password === payload.password
+      );
+
+      if (email === "admin@example.com" && payload.password === "password123") {
         resolve({
           success: true,
           message: "Demo login successful!",
           user: { id: 1, email: "admin@example.com" },
         });
+      } else if (registeredUser) {
+        resolve({
+          success: true,
+          message: "Login successful!",
+          user: { id: registeredUser.id, email: registeredUser.email },
+        });
       } else {
         resolve({
           success: false,
-          message: "Demo mode: Use 'admin@example.com' and 'password123' to login, or register a new user.",
+          message: "Invalid email or password.",
         });
       }
     }, 1000);
@@ -131,11 +156,42 @@ function mockLogin(payload: LoginPayload): Promise<AuthResponse> {
 function mockRegister(payload: RegisterPayload): Promise<AuthResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
+      const email = payload.email.trim().toLowerCase();
+      const demoUsers = getDemoUsers();
+      const existingUser = demoUsers.find((user) => user.email === email);
+
+      if (existingUser) {
+        existingUser.password = payload.password || "";
+        saveDemoUsers(demoUsers);
+      } else {
+        demoUsers.push({
+          id: Math.floor(Math.random() * 1000) + 1,
+          email,
+          password: payload.password || "",
+        });
+        saveDemoUsers(demoUsers);
+      }
+
       resolve({
         success: true,
-        message: `Demo: User ${payload.firstName} registered successfully (Mock mode).`,
-        user: { id: Math.floor(Math.random() * 1000) + 1, email: payload.email },
+        message: "Registration successful. Please login.",
+        user: { id: demoUsers.find((user) => user.email === email)?.id || 1, email },
       });
     }, 1000);
   });
+}
+
+function getDemoUsers(): Array<{ id: number; email: string; password: string }> {
+  if (typeof window === "undefined") return [];
+
+  try {
+    return JSON.parse(window.localStorage.getItem(DEMO_USERS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveDemoUsers(users: Array<{ id: number; email: string; password: string }>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(DEMO_USERS_KEY, JSON.stringify(users));
 }
