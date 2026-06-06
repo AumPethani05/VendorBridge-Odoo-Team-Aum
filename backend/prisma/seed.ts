@@ -2,61 +2,99 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Clear existing data
+  // Clear existing data in reverse order of dependencies
+  await prisma.approval_chain.deleteMany({});
+  await prisma.quote_items.deleteMany({});
+  await prisma.quotations.deleteMany({});
+  await prisma.rfq_line_items.deleteMany({});
+  await prisma.rfqs.deleteMany({});
   await prisma.invoices.deleteMany({});
   await prisma.purchase_orders.deleteMany({});
-  await prisma.quotations.deleteMany({});
-  await prisma.rfqs.deleteMany({});
   await prisma.vendors.deleteMany({});
 
-  // Seed Vendors
-  const infra = await prisma.vendors.create({
-    data: { name: 'Infra', email: 'contact@infra.com', phone: '123-456-7890' }
-  });
-  const techCore = await prisma.vendors.create({
-    data: { name: 'Tech core', email: 'sales@techcore.io', phone: '987-654-3210' }
-  });
-  const officeNeed = await prisma.vendors.create({
-    data: { name: 'OfficeNeed Co', email: 'support@officeneed.com', phone: '555-0199' }
-  });
+  console.log('Seeding Vendors...');
+  const vendorsData = [
+    { name: 'Infra Supplies Pvt Ltd', category: 'Constructions', gst_no: '27AABCS1429Bz0', phone: '+91 98765 43210', status: 'active', rating: 4.5, email: 'infra@example.com' },
+    { name: 'Tech Core LTD', category: 'IT', gst_no: '27AABCS1429Bz0', phone: '+91 91234 56789', status: 'active', rating: 4.2, email: 'techcore@example.com' },
+    { name: 'FastLog Transport', category: 'Logistics', gst_no: '27AABCS1429Bz0', phone: '+91 87654 32109', status: 'blocked', rating: 3.5, email: 'fastlog@example.com' },
+    { name: 'Global Solutions Inc.', category: 'Manufacturing', gst_no: '27AABCS1429Bz0', phone: '+91 76543 21098', status: 'active', rating: 4.0, email: 'global@example.com' },
+    { name: 'Apex Consultancy', category: 'Consulting', gst_no: '27AABCS1429Bz0', phone: '+91 65432 10987', status: 'pending', rating: 4.1, email: 'apex@example.com' },
+    { name: 'Office Need Co.', category: 'Furniture', gst_no: '27AABCS1429Bz0', phone: '+91 10987 65432', status: 'active', rating: 3.8, email: 'officeneed@example.com' },
+  ];
 
-  // Seed RFQs (12 Active as per mockup)
-  for (let i = 1; i <= 12; i++) {
-    await prisma.rfqs.create({
-      data: {
-        title: `RFQ for Material ${i}`,
-        status: 'sent',
-        vendor_id: (i % 3 === 0) ? officeNeed.id : (i % 2 === 0 ? techCore.id : infra.id)
-      }
-    });
+  const createdVendors = [];
+  for (const v of vendorsData) {
+    const vendor = await prisma.vendors.create({ data: v });
+    createdVendors.push(vendor);
   }
 
-  // Seed Purchase Orders (as per mockup table)
-  await prisma.purchase_orders.createMany({
+  console.log('Seeding RFQ...');
+  const rfq = await prisma.rfqs.create({
+    data: {
+      title: 'Office Furniture procurement Q2',
+      description: 'Ergonomic chairs and standing desks for 3rd floor',
+      category: 'Furniture',
+      deadline: new Date('2025-06-15'),
+      status: 'sent',
+      vendor_id: createdVendors[0].id, // Default vendor
+    }
+  });
+
+  console.log('Seeding RFQ Line Items...');
+  const item1 = await prisma.rfq_line_items.create({
+    data: { rfq_id: rfq.id, item_name: 'Ergonomic chair', quantity: 25, unit: 'NOS' }
+  });
+  const item2 = await prisma.rfq_line_items.create({
+    data: { rfq_id: rfq.id, item_name: 'Standing desks', quantity: 10, unit: 'NOS' }
+  });
+
+  console.log('Seeding Quotations...');
+  // Quotation 1: Infra Supplies (Lowest)
+  const quote1 = await prisma.quotations.create({
+    data: {
+      rfq_id: rfq.id,
+      vendor_id: createdVendors[0].id,
+      subtotal: 156779.66,
+      tax_percent: 18,
+      grand_total: 185000,
+      status: 'accepted',
+      notes: 'Best price guaranteed.',
+    }
+  });
+  await prisma.quote_items.createMany({
     data: [
-      { po_number: 'Po1', vendor_id: infra.id, amount: 87000, status: 'approved' },
-      { po_number: 'Po2', vendor_id: techCore.id, amount: 140000, status: 'pending' },
-      { po_number: 'Po3', vendor_id: officeNeed.id, amount: 34900, status: 'draft' },
+      { quote_id: quote1.id, rfq_item_id: item1.id, unit_price: 3500, delivery_days: 10 },
+      { quote_id: quote1.id, rfq_item_id: item2.id, unit_price: 8000, delivery_days: 10 },
     ]
   });
 
-  // Seed Overdue Invoices (3 Overdue as per mockup)
-  const po1 = await prisma.purchase_orders.findUnique({ where: { po_number: 'Po1' } });
-  if (po1) {
-    for (let i = 1; i <= 3; i++) {
-        await prisma.invoices.create({
-          data: {
-            invoice_no: `INV-00${i}`,
-            po_id: po1.id,
-            amount: 15000,
-            status: 'overdue',
-            due_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5) // 5 days ago
-          }
-        });
+  // Quotation 2: Tech Core
+  const quote2 = await prisma.quotations.create({
+    data: {
+      rfq_id: rfq.id,
+      vendor_id: createdVendors[1].id,
+      subtotal: 169500,
+      tax_percent: 18,
+      grand_total: 200010,
+      status: 'pending',
     }
-  }
+  });
+  await prisma.quote_items.createMany({
+    data: [
+      { quote_id: quote2.id, rfq_item_id: item1.id, unit_price: 3800, delivery_days: 14 },
+      { quote_id: quote2.id, rfq_item_id: item2.id, unit_price: 8200, delivery_days: 14 },
+    ]
+  });
 
-  console.log('Seed data created successfully!');
+  console.log('Seeding Approval Chain...');
+  await prisma.approval_chain.createMany({
+    data: [
+      { rfq_id: rfq.id, approver: 'Rahul Mehta', role: 'Procurement Head', status: 'approved', approved_at: new Date('2026-05-20T10:32:00Z'), remarks: 'Price is within budget.' },
+      { rfq_id: rfq.id, approver: 'Priya Shah', role: 'Finance Manager', status: 'pending', remarks: '' },
+    ]
+  });
+
+  console.log('Full Seeding completed successfully!');
 }
 
 main()
