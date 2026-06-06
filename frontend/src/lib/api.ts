@@ -1,4 +1,5 @@
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+const envBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+const BACKEND_URL = (envBackendUrl && envBackendUrl.trim() !== "") ? envBackendUrl : "http://localhost:3001";
 const API_BASE_URL = `${BACKEND_URL}/api/auth`;
 
 export interface AuthResponse {
@@ -11,11 +12,12 @@ export interface AuthResponse {
 }
 
 export interface LoginPayload {
-  email: string;
+  username: string;
   password?: string;
 }
 
 export interface RegisterPayload {
+  username: string;
   email: string;
   password?: string;
   firstName?: string;
@@ -31,13 +33,23 @@ export interface RegisterPayload {
  */
 export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
   try {
-    const res = await fetch(`${API_BASE_URL}/login`, {
+    const url = `${API_BASE_URL}/login`;
+    console.log(`📡 Login Request: ${url}`);
+    
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
+
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error("Non-JSON detected:", text.substring(0, 50));
+      throw new Error("SERVER_NOT_JSON");
+    }
 
     const data = await res.json();
 
@@ -55,9 +67,7 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
     };
   } catch (error) {
     console.error("Login Error:", error);
-    // If the backend is not running or unreachable, run in demo mock mode for testing
     if (process.env.NODE_ENV === "development") {
-      console.warn("Backend server not reached. Falling back to development mock response.");
       return mockLogin(payload);
     }
     return {
@@ -69,16 +79,33 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
 
 export async function registerUser(payload: RegisterPayload): Promise<AuthResponse> {
   try {
-    const res = await fetch(`${API_BASE_URL}/register`, {
+    const url = `${API_BASE_URL}/register`;
+    console.log(`📡 Registration Request: ${url}`);
+    
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        username: payload.username,
+        first_name: payload.firstName,
+        last_name: payload.lastName,
         email: payload.email,
+        phone_number: payload.phoneNumber,
+        role: payload.role,
+        country: payload.country,
+        additional_information: payload.additionalInfo,
         password: payload.password,
       }),
     });
+
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error("Non-JSON detected:", text.substring(0, 50));
+      throw new Error("SERVER_NOT_JSON");
+    }
 
     const data = await res.json();
 
@@ -96,9 +123,7 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
     };
   } catch (error) {
     console.error("Registration Error:", error);
-    // If the backend is not running or unreachable, run in demo mock mode for testing
     if (process.env.NODE_ENV === "development") {
-      console.warn("Backend server not reached. Falling back to development mock response.");
       return mockRegister(payload);
     }
     return {
@@ -112,16 +137,17 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
 function mockLogin(payload: LoginPayload): Promise<AuthResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
-      if (payload.email === "admin@example.com" && payload.password === "password123") {
+      // Mock check using username
+      if (payload.username === "admin" && payload.password === "password123") {
         resolve({
           success: true,
-          message: "Demo login successful!",
+          message: "Demo login successful (Mock)!",
           user: { id: 1, email: "admin@example.com" },
         });
       } else {
         resolve({
           success: false,
-          message: "Demo mode: Use 'admin@example.com' and 'password123' to login, or register a new user.",
+          message: "Demo mode: Use 'admin' and 'password123' to login, or register a new user.",
         });
       }
     }, 1000);
@@ -133,7 +159,7 @@ function mockRegister(payload: RegisterPayload): Promise<AuthResponse> {
     setTimeout(() => {
       resolve({
         success: true,
-        message: `Demo: User ${payload.firstName} registered successfully (Mock mode).`,
+        message: `Demo: User ${payload.username} registered successfully (Mock mode).`,
         user: { id: Math.floor(Math.random() * 1000) + 1, email: payload.email },
       });
     }, 1000);
