@@ -145,7 +145,7 @@ export const RegisterForm: React.FC = () => {
       )}
 
       <div className="space-y-4">
-        {/* Two-column Responsive Grid */}
+        {/*  Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Input
@@ -260,7 +260,7 @@ export const RegisterForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Textarea Section */}
+        {/* Textarea  */}
         <div>
           <Textarea
             id="additionalInfo"
