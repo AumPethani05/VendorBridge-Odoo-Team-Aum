@@ -6,7 +6,7 @@ import { Search, Plus, ListFilter, Eye, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function VendorsPage() {
-  const [vendors, setVendors] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any>([]);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -20,6 +20,7 @@ export default function VendorsPage() {
         setVendors(response.data);
       } catch (error) {
         console.error("Failed to fetch vendors", error);
+        setVendors([]);
       } finally {
         setLoading(false);
       }
@@ -27,11 +28,14 @@ export default function VendorsPage() {
     fetchVendors();
   }, [search, activeFilter]);
 
+  // Robustly handle cases where vendors might not be an array
+  const safeVendors = Array.isArray(vendors) ? vendors : [];
+
   const filters = [
-    { label: "All", count: vendors.length, id: "all" },
-    { label: "Active", count: vendors.filter(v => v.status === 'active').length, id: "active" },
-    { label: "Pending", count: vendors.filter(v => v.status === 'pending').length, id: "pending" },
-    { label: "Blocked", count: vendors.filter(v => v.status === 'blocked').length, id: "blocked" },
+    { label: "All", count: safeVendors.length, id: "all" },
+    { label: "Active", count: safeVendors.filter(v => (v as any).status === 'active').length, id: "active" },
+    { label: "Pending", count: safeVendors.filter(v => (v as any).status === 'pending').length, id: "pending" },
+    { label: "Blocked", count: safeVendors.filter(v => (v as any).status === 'blocked').length, id: "blocked" },
   ];
 
   return (
@@ -87,12 +91,18 @@ export default function VendorsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {vendors.map((vendor) => (
+            {loading ? (
+               <tr>
+                 <td colSpan={6} className="px-6 py-10 text-center text-slate-400 font-medium">
+                    Loading vendors list...
+                 </td>
+               </tr>
+            ) : safeVendors.map((vendor) => (
               <tr key={vendor.id} className="hover:bg-slate-50/30 transition-colors group">
                 <td className="px-6 py-5">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-700">
-                      {vendor.name[0]}
+                      {vendor.name?.[0] || 'V'}
                     </div>
                     <span className="font-bold text-slate-900">{vendor.name}</span>
                   </div>
@@ -116,6 +126,13 @@ export default function VendorsPage() {
                 </td>
               </tr>
             ))}
+            {!loading && safeVendors.length === 0 && (
+              <tr>
+                 <td colSpan={6} className="px-6 py-10 text-center text-slate-400 font-medium">
+                    No vendors found matching your criteria.
+                 </td>
+               </tr>
+            )}
           </tbody>
         </table>
       </div>

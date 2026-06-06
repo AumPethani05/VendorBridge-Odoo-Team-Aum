@@ -2,7 +2,8 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Clear existing data in reverse order of dependencies
+  // @ts-ignore
+  await prisma.activity_logs.deleteMany({});
   await prisma.approval_chain.deleteMany({});
   await prisma.quote_items.deleteMany({});
   await prisma.quotations.deleteMany({});
@@ -36,7 +37,7 @@ async function main() {
       category: 'Furniture',
       deadline: new Date('2025-06-15'),
       status: 'sent',
-      vendor_id: createdVendors[0].id, // Default vendor
+      vendor_id: createdVendors[0]!.id, // Default vendor
     }
   });
 
@@ -53,7 +54,7 @@ async function main() {
   const quote1 = await prisma.quotations.create({
     data: {
       rfq_id: rfq.id,
-      vendor_id: createdVendors[0].id,
+      vendor_id: createdVendors[0]!.id,
       subtotal: 156779.66,
       tax_percent: 18,
       grand_total: 185000,
@@ -72,7 +73,7 @@ async function main() {
   const quote2 = await prisma.quotations.create({
     data: {
       rfq_id: rfq.id,
-      vendor_id: createdVendors[1].id,
+      vendor_id: createdVendors[1]!.id,
       subtotal: 169500,
       tax_percent: 18,
       grand_total: 200010,
@@ -91,6 +92,39 @@ async function main() {
     data: [
       { rfq_id: rfq.id, approver: 'Rahul Mehta', role: 'Procurement Head', status: 'approved', approved_at: new Date('2026-05-20T10:32:00Z'), remarks: 'Price is within budget.' },
       { rfq_id: rfq.id, approver: 'Priya Shah', role: 'Finance Manager', status: 'pending', remarks: '' },
+    ]
+  });
+
+  console.log('Seeding Purchase Orders...');
+  const po1 = await prisma.purchase_orders.create({
+    data: {
+      po_number: 'PO-2025-0068',
+      vendor_id: createdVendors[0]!.id,
+      amount: 185000,
+      status: 'confirmed',
+      created_at: new Date('2025-05-21T00:00:00Z')
+    }
+  });
+
+  console.log('Seeding Invoices...');
+  await prisma.invoices.create({
+    data: {
+      invoice_no: 'INV-2025-0068',
+      po_id: po1.id,
+      amount: 185000,
+      status: 'pending',
+      due_date: new Date('2025-06-21'),
+    }
+  });
+
+  console.log('Seeding Activity Logs...');
+  // @ts-ignore
+  await prisma.activity_logs.createMany({
+    data: [
+      { action: 'Quotation selected', details: 'Infra supplies pvt ltd selected for office furniture Q2', entity: 'RFQ', created_at: new Date('2025-05-23T21:15:00Z') },
+      { action: 'Approval pending', details: 'PO-2024 awaiting L2 approval by priya shah', entity: 'Approvals', created_at: new Date('2025-05-22T09:15:00Z') },
+      { action: 'RFQ published', details: 'office furniture Q2 sent to 3 vendors', entity: 'RFQ', created_at: new Date('2025-05-19T00:00:00Z') },
+      { action: 'Vendor added', details: 'FastLog transport registered and pending verifications', entity: 'Vendors', created_at: new Date('2025-05-18T15:20:00Z') },
     ]
   });
 

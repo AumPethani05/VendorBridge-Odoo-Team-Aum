@@ -39,8 +39,10 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<any>(null);
   const [recentPOs, setRecentPOs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const fetchData = async () => {
       try {
         const response = await axios.get("http://localhost:3001/api/dashboard/summary");
@@ -121,7 +123,13 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {recentPOs.map((po, i) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-10 text-center text-gray-400 font-medium">
+                       Loading recent orders...
+                    </td>
+                  </tr>
+                ) : (recentPOs || []).map((po, i) => (
                   <tr key={i} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-6 py-4 text-sm font-bold text-gray-900">#{po.id}</td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-600">{po.vendor}</td>
@@ -129,14 +137,21 @@ export default function DashboardPage() {
                     <td className="px-6 py-4 text-right">
                       <span className={cn(
                         "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold",
-                        po.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : 
-                        po.status === 'pending' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'
+                        po.status === 'confirmed' || po.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : 
+                        po.status === 'pending' || po.status === 'draft' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'
                       )}>
                         {po.status}
                       </span>
                     </td>
                   </tr>
                 ))}
+                {!loading && recentPOs?.length === 0 && (
+                   <tr>
+                    <td colSpan={4} className="px-6 py-10 text-center text-gray-400 font-medium">
+                       No recent orders found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -152,8 +167,9 @@ export default function DashboardPage() {
             <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
           </div>
           <div className="flex-1 w-full min-h-[300px]">
-             <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
+             {mounted ? (
+               <ResponsiveContainer width="100%" height="100%">
+                 <BarChart data={chartData}>
                   <defs>
                     <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
@@ -183,8 +199,13 @@ export default function DashboardPage() {
                     radius={[6, 6, 0, 0]} 
                     barSize={24}
                   />
-                </BarChart>
-             </ResponsiveContainer>
+                 </BarChart>
+               </ResponsiveContainer>
+             ) : (
+               <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-medium">
+                  Initializing charts...
+               </div>
+             )}
           </div>
         </div>
       </div>
