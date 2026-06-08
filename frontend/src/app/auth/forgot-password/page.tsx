@@ -1,5 +1,6 @@
 "use client";
 
+//Forgot password page with form validation and success message.
 import React, { useState } from "react";
 import Link from "next/link";
 import AuthLayout from "@/components/auth/AuthLayout";

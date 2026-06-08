@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-// import { prisma } from "../lib/prisma.js";
-const { prisma } = require("../lib/prisma.js");
+const prisma = require("../lib/prisma");
+const jwtSecret = process.env.JWT_SECRET || "vendorbridge-local-dev-secret";
 
 export const authMiddleware = async (
   req: Request,
@@ -21,10 +21,7 @@ export const authMiddleware = async (
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string
-    ) as { id: number };
+    const decoded = jwt.verify(token, jwtSecret) as { id: number };
 
     const user = await prisma.users.findUnique({
       where: {
@@ -32,7 +29,11 @@ export const authMiddleware = async (
       },
       select: {
         id: true,
+        username: true,
+        first_name: true,
+        last_name: true,
         email: true,
+        role: true,
         created_at: true,
       },
     });

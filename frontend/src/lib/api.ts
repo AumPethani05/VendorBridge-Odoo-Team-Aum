@@ -35,6 +35,7 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
   try {
     const res = await fetch(`${API_BASE_URL}/login`, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
@@ -77,6 +78,7 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
   try {
     const res = await fetch(`${API_BASE_URL}/register`, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },

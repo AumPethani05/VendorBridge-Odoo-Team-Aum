@@ -5,6 +5,7 @@ import { Request, Response } from "express";
 const isProduction =
   process.env.NODE_ENV === "production" ||
   process.env.FRONTEND_URL?.includes("onrender.com");
+const jwtSecret = process.env.JWT_SECRET || "vendorbridge-local-dev-secret";
 
 // ================= REGISTER =================
 
@@ -140,7 +141,7 @@ async function register(req: Request, res: Response) {
       {
         id: user.id,
       },
-      process.env.JWT_SECRET as string,
+      jwtSecret,
       {
         expiresIn: "7d",
       }
@@ -238,23 +239,27 @@ async function register(req: Request, res: Response) {
 // }
 async function login(req: Request, res: Response) {
   try {
-    const { username, password } = req.body;
+    const { username, email, password } = req.body;
+    const loginId = username || email;
 
-    if (!username || !password) {
+    if (!loginId || !password) {
       return res.status(400).json({
-        message: "Username and password are required",
+        message: "Email and password are required",
       });
     }
 
-    const user = await prisma.users.findUnique({
+    const user = await prisma.users.findFirst({
       where: {
-        username,
+        OR: [
+          { username: loginId },
+          { email: loginId },
+        ],
       },
     });
 
     if (!user) {
       return res.status(400).json({
-        message: "Invalid username or password",
+        message: "Invalid email or password",
       });
     }
 
@@ -265,7 +270,7 @@ async function login(req: Request, res: Response) {
 
     if (!isPasswordValid) {
       return res.status(400).json({
-        message: "Invalid username or password",
+        message: "Invalid email or password",
       });
     }
 
@@ -273,7 +278,7 @@ async function login(req: Request, res: Response) {
       {
         id: user.id,
       },
-      process.env.JWT_SECRET as string,
+      jwtSecret,
       {
         expiresIn: "7d",
       }
@@ -307,7 +312,28 @@ async function login(req: Request, res: Response) {
   }
 }
 
+async function profile(req: Request, res: Response) {
+  return res.status(200).json({
+    user: req.user,
+  });
+}
+
+async function logout(req: Request, res: Response) {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    partitioned: isProduction,
+  });
+
+  return res.status(200).json({
+    message: "Logout successful",
+  });
+}
+
 module.exports = {
   register,
   login,
+  profile,
+  logout,
 };
