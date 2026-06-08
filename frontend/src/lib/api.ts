@@ -45,8 +45,8 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        username: payload.email,
-        email: payload.email,
+        username: payload.username,
+        email: payload.username,
         password: payload.password,
       }),
     });
