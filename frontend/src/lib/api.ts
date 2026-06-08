@@ -145,7 +145,7 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
 function mockLogin(payload: LoginPayload): Promise<AuthResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const email = payload.email.trim().toLowerCase();
+      const email = payload.username.trim().toLowerCase();
       const demoUsers = getDemoUsers();
       const registeredUser = demoUsers.find(
         (user) => user.email === email && user.password === payload.password

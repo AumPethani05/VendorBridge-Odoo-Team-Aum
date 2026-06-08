@@ -1,12 +1,40 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 
 const AUTH_SESSION_KEY = "vendorbridge-authenticated";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function getAuthSnapshot() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return window.localStorage.getItem(AUTH_SESSION_KEY) === "true";
+}
+
+function getServerAuthSnapshot() {
+  return false;
+}
+
+function subscribeToAuthChanges(onStoreChange: () => void) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  const handleStorageChange = (event: StorageEvent) => {
+    if (event.key === AUTH_SESSION_KEY) {
+      onStoreChange();
+    }
+  };
+
+  window.addEventListener("storage", handleStorageChange);
+  return () => {
+    window.removeEventListener("storage", handleStorageChange);
+  };
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isAuthPage = pathname.startsWith("/auth");
