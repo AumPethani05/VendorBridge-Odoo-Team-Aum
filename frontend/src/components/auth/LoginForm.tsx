@@ -9,17 +9,17 @@ import { loginUser } from "@/lib/api";
 
 export const LoginForm: React.FC = () => {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const validate = () => {
-    const newErrors: { email?: string; password?: string } = {};
-    if (!email.trim()) {
-      newErrors.email = "Username or Email is required";
+    const newErrors: { username?: string; password?: string } = {};
+    if (!username.trim()) {
+      newErrors.username = "Username is required";
     }
     if (!password) {
       newErrors.password = "Password is required";
@@ -37,7 +37,7 @@ export const LoginForm: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await loginUser({ email, password });
+      const response = await loginUser({ username, password });
 
       if (response.success) {
         setSuccessMessage(response.message || "Login successful!");
@@ -70,19 +70,19 @@ export const LoginForm: React.FC = () => {
       <div className="space-y-4">
         <div>
           <Input
-            id="username-or-email"
-            name="email"
+            id="username"
+            name="username"
             type="text"
             placeholder="Username"
-            value={email}
+            value={username}
             onChange={(e) => {
-              setEmail(e.target.value);
-              if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+              setUsername(e.target.value);
+              if (errors.username) setErrors((prev) => ({ ...prev, username: undefined }));
             }}
-            error={errors.email}
+            error={errors.username}
             autoComplete="username"
             required
-            aria-label="Username or Email"
+            aria-label="Username"
           />
         </div>
 

@@ -10,9 +10,11 @@ import Button from "../ui/Button";
 import { registerUser } from "@/lib/api";
 
 const ROLE_OPTIONS = [
-  { value: "", label: "Role (Admin, Officer)" },
-  { value: "admin", label: "Admin" },
-  { value: "officer", label: "Officer" },
+  { value: "", label: "Select Role" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "PROCUREMENT_OFFICER", label: "Procurement Officer" },
+  { value: "MANAGER", label: "Manager" },
+  { value: "VENDOR", label: "Vendor" },
 ];
 
 const COUNTRY_OPTIONS = [
@@ -31,10 +33,10 @@ export const RegisterForm: React.FC = () => {
     lastName: "",
     email: "",
     phoneNumber: "",
+    username: "",
     role: "",
     country: "",
     password: "",
-    confirmPassword: "",
     additionalInfo: "",
   });
 
@@ -69,6 +71,12 @@ export const RegisterForm: React.FC = () => {
       newErrors.phoneNumber = "Phone Number is required";
     }
 
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
+    } else if (formData.username.length < 3) {
+      newErrors.username = "Username must be at least 3 characters";
+    }
+
     if (!formData.role) newErrors.role = "Role selection is required";
     if (!formData.country) newErrors.country = "Country selection is required";
 
@@ -76,10 +84,6 @@ export const RegisterForm: React.FC = () => {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
     }
 
     setErrors(newErrors);
@@ -96,10 +100,9 @@ export const RegisterForm: React.FC = () => {
     setIsLoading(true);
     try {
       const response = await registerUser({
+        username: formData.username,
         email: formData.email,
         password: formData.password,
-        // The backend only accepts email and password in the database model,
-        // but we pass all form details in the API payload so developers can extend it easily.
         firstName: formData.firstName,
         lastName: formData.lastName,
         phoneNumber: formData.phoneNumber,
@@ -116,10 +119,10 @@ export const RegisterForm: React.FC = () => {
           lastName: "",
           email: "",
           phoneNumber: "",
+          username: "",
           role: "",
           country: "",
           password: "",
-          confirmPassword: "",
           additionalInfo: "",
         });
         router.replace("/auth/login");
@@ -231,8 +234,20 @@ export const RegisterForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Added Password/Confirm Password fields for functionality */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Input
+              id="username"
+              name="username"
+              placeholder="Username"
+              value={formData.username}
+              onChange={handleInputChange}
+              error={errors.username}
+              required
+              aria-label="Username"
+              autoComplete="username"
+            />
+          </div>
           <div>
             <Input
               id="register-password"
@@ -244,20 +259,6 @@ export const RegisterForm: React.FC = () => {
               error={errors.password}
               required
               aria-label="Password"
-              autoComplete="new-password"
-            />
-          </div>
-          <div>
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              placeholder="Confirm Password"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              error={errors.confirmPassword}
-              required
-              aria-label="Confirm Password"
               autoComplete="new-password"
             />
           </div>

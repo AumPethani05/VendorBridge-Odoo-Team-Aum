@@ -1,4 +1,5 @@
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+const envBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+const BACKEND_URL = (envBackendUrl && envBackendUrl.trim() !== "") ? envBackendUrl : "http://localhost:3001";
 const API_BASE_URL = `${BACKEND_URL}/api/auth`;
 const DEMO_USERS_KEY = "vendorbridge-demo-users";
 
@@ -13,11 +14,12 @@ export interface AuthResponse {
 }
 
 export interface LoginPayload {
-  email: string;
+  username: string;
   password?: string;
 }
 
 export interface RegisterPayload {
+  username: string;
   email: string;
   password?: string;
   firstName?: string;
@@ -33,7 +35,10 @@ export interface RegisterPayload {
  */
 export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
   try {
-    const res = await fetch(`${API_BASE_URL}/login`, {
+    const url = `${API_BASE_URL}/login`;
+    console.log(`📡 Login Request: ${url}`);
+    
+    const res = await fetch(url, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -45,6 +50,13 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
         password: payload.password,
       }),
     });
+
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error("Non-JSON detected:", text.substring(0, 50));
+      throw new Error("SERVER_NOT_JSON");
+    }
 
     const data = await res.json();
 
@@ -62,9 +74,7 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
     };
   } catch (error) {
     console.error("Login Error:", error);
-    // If the backend is not running or unreachable, run in demo mock mode for testing
     if (process.env.NODE_ENV === "development") {
-      console.warn("Backend server not reached. Falling back to development mock response.");
       return mockLogin(payload);
     }
     return {
@@ -76,7 +86,10 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
 
 export async function registerUser(payload: RegisterPayload): Promise<AuthResponse> {
   try {
-    const res = await fetch(`${API_BASE_URL}/register`, {
+    const url = `${API_BASE_URL}/register`;
+    console.log(`📡 Registration Request: ${url}`);
+    
+    const res = await fetch(url, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -95,6 +108,13 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
       }),
     });
 
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error("Non-JSON detected:", text.substring(0, 50));
+      throw new Error("SERVER_NOT_JSON");
+    }
+
     const data = await res.json();
 
     if (!res.ok) {
@@ -111,9 +131,7 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
     };
   } catch (error) {
     console.error("Registration Error:", error);
-    // If the backend is not running or unreachable, run in demo mock mode for testing
     if (process.env.NODE_ENV === "development") {
-      console.warn("Backend server not reached. Falling back to development mock response.");
       return mockRegister(payload);
     }
     return {
@@ -136,7 +154,7 @@ function mockLogin(payload: LoginPayload): Promise<AuthResponse> {
       if (email === "admin@example.com" && payload.password === "password123") {
         resolve({
           success: true,
-          message: "Demo login successful!",
+          message: "Demo login successful (Mock)!",
           user: { id: 1, email: "admin@example.com" },
         });
       } else if (registeredUser) {
